@@ -1,0 +1,41 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1rem;
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+  line-height: 1.7;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.site-title {
+  margin: 0;
+  font-weight: bold;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.category,
+.filetype {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.category::before { content: "["; }
+.category::after { content: "]"; }

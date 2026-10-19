@@ -1,0 +1,29 @@
+# 記事一覧. articles.html はこのファイルを読み込んで表示する.
+#
+# 書式:
+#   [セクション名]
+#   タイトル | リンク先 | カテゴリ
+#
+# - リンク先は URL か, このフォルダ (articles/) からの相対パス.
+# - リンク先が .pdf で終わる場合は自動で PDF と表示される.
+# - 空行と # で始まる行は無視される.
+
+[自分の勉強や考えたことなど]
+代数的圏とAnimation | AlgebraicCategory/algebraiccat.pdf | 圏論
+同変ドラームコホモロジーと特性類 | Equivariant/equivariant.pdf | 幾何学
+素数定理に関する備忘録 | https://mathlog.info/articles/tl5gWkaGmfm9Lqi6ztSv | 数論
+半単純環とか既約分解とかの備忘録 | https://mathlog.info/articles/cwSyCBIFyxp9pv2kgk4P | 代数学
+代数体におけるLTEの補題の拡張 | https://mathlog.info/articles/886 | 数論
+
+[大学数学の高校生向け解説]
+初等幾何から見える代数幾何の世界 | ProjectiveGeometry/ProjGeom.pdf | 代数学
+環論を使って因数分解と素因数分解を俯瞰する話 | https://mathlog.info/articles/3803 | 代数学
+有限体のガロア理論 | https://mathlog.info/articles/2232 | 代数学
+
+[競技数学/初等整数論]
+modp完全攻略―位数を中心に | https://gochisuu.netlify.app/topics/orpr/ | 数論
+Prime Constraint | PrimeConstraint/prime_cons.pdf | 数論
+ジグモンディーの定理 | https://mathlog.info/articles/0PWxW30yq3cIv7nk3pn0 | 数論
+LTEの補題とその応用 | https://mathlog.info/articles/216 | 数論
+素因数分解を利用した式変形 | https://mathlog.info/articles/3387 | 数論
+整数係数多項式とmodp | https://mathlog.info/articles/3376 | 数論

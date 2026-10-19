@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Articles | jun2nosimobe</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <header>
+    <p class="site-title"><a href="../index.html">jun2nosimobe</a></p>
+    <nav>
+      <a href="../articles/articles.html">Articles</a>
+      <a href="../toys/toys.html">Toys</a>
+      <a href="../diaries/diaries.html">Diaries</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Articles</h1>
+    <!-- 本文: このページの説明など -->
+
+    <!-- 記事一覧は list.txt から自動生成される.
+         file:// で直接開くと読み込めないので, ローカルで確認するときは
+         リポジトリのルートで python3 -m http.server を実行し http://localhost:8000/ を開く. -->
+    <div id="article-list"><p>読み込み中...</p></div>
+  </main>
+
+  <script>
+    function label(text, className) {
+      const span = document.createElement('span');
+      span.className = className;
+      span.textContent = text;
+      return span;
+    }
+
+    const container = document.getElementById('article-list');
+
+    fetch('list.txt', { cache: 'no-cache' })
+      .then(res => {
+        if (!res.ok) throw new Error(res.status);
+        return res.text();
+      })
+      .then(text => {
+        container.replaceChildren();
+        let list = null;
+        for (const raw of text.replace(/^﻿/, '').split(/\r?\n/)) {
+          const line = raw.trim();
+          if (line === '' || line.startsWith('#')) continue;
+
+          const section = line.match(/^\[(.+)\]$/);
+          if (section) {
+            const h2 = document.createElement('h2');
+            h2.textContent = section[1];
+            list = document.createElement('ul');
+            container.append(h2, list);
+            continue;
+          }
+
+          const [title, href, category] = line.split('|').map(s => s.trim());
+          if (!href) continue;
+          if (!list) {
+            list = document.createElement('ul');
+            container.append(list);
+          }
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = href;
+          a.textContent = title || href;
+          li.append(a);
+          if (/\.pdf$/i.test(href)) li.append(' ', label('PDF', 'filetype'));
+          if (category) li.append(' ', label(category, 'category'));
+          list.append(li);
+        }
+      })
+      .catch(() => {
+        container.textContent = '記事一覧 (list.txt) を読み込めませんでした.';
+      });
+  </script>
+</body>
+</html>

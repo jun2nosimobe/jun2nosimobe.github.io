@@ -1,0 +1,325 @@
+\documentclass{ltjsarticle}
+
+% --- 基本パッケージ群 ---
+\usepackage{ascmac}
+\usepackage{amsmath, amssymb} % amsfonts は amssymb が内包
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{xcolor} % color からモダンな xcolor へ変更
+\usepackage{bm}
+
+% --- 参考文献 (biblatex + biber) ---
+\usepackage[backend=biber, style=alphabetic]{biblatex}
+\addbibresource{references.bib}
+
+% --- hyperref群 (他パッケージの後に配置) ---
+\usepackage[colorlinks=true, allcolors=blue]{hyperref} % オプションは適宜調整
+\usepackage{bookmark}
+
+% --- 定理スタイルと環境の定義 ---
+\newtheoremstyle{mystyle}%
+    {}%                 % 上部スペース
+    {}%                 % 下部スペース
+    {\normalfont}%      % 本文フォント
+    {}%                 % インデント
+    {\bfseries}%        % 見出しフォント (\relaxから変更)
+    {}%                 % 見出し後の句読点
+    {\newline}%         % 見出し後のスペース (\newline をここに配置)
+    {\thmname{#1}\thmnumber{#2}\thmnote{ (#3)}} % カスタムヘッダ (空白制御を最適化)
+
+\theoremstyle{mystyle}
+\newtheorem{theorem}{定理}[section]
+\newtheorem{dfn}[theorem]{定義}
+\newtheorem{lemma}[theorem]{補題}
+\newtheorem{prop}[theorem]{命題}
+\newtheorem{corollary}[theorem]{系} % cor はこちらに統合
+\newtheorem{rmk}[theorem]{注}
+\newtheorem{ex}[theorem]{例}       % [section]で独立していたのを theorem カウンタに統合 (意図して独立させていたなら [section] に戻してください)
+
+% 独立したカウンターを持つ環境
+\newtheorem{prob}{練習問題}
+\newtheorem{expr}{例題}
+
+% --- 証明・解答環境の調整 ---
+\renewcommand{\proofname}{\textbf{証明}}
+
+\makeatletter
+% proof 環境の再定義: 見出しのあとのピリオドを削除し、改行する仕様
+\renewenvironment{proof}[1][\proofname]{\par
+  \pushQED{\qed}
+  \normalfont \topsep6\p@\@plus6\p@\relax
+  \trivlist
+  \item\relax
+  {#1\@addpunct{\newline\ignorespaces}}% ピリオドを除去し、直後に改行
+}{
+  \popQED\endtrivlist\@endpefalse
+}
+\makeatother
+
+% 解答環境 (proof環境を流用)
+\newenvironment{ans}{\begin{proof}[\textbf{解答}]}{\end{proof}}
+
+\everymath{\displaystyle}
+\renewcommand{\labelenumi}{(\theenumi)}
+
+% --- 数学マクロの定義 ---
+\renewcommand{\bmod}{\mathrel{\mathrm{mod}}} % 必要に応じて \pmod 等の標準コマンドも検討
+\newcommand{\di}{\mid}
+\newcommand{\dis}{\displaystyle}
+\newcommand{\sq}{\chi_2}
+\newcommand{\st}{\mathrel{\mathrm{s.t.}}} % ローマン体に修正
+
+% \DeclareMathOperator による演算子の定義 (適切なスペースが自動付与される)
+\DeclareMathOperator{\ord}{ord}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Int}{Int}
+\DeclareMathOperator{\grad}{grad}
+\DeclareMathOperator{\Hom}{Hom}
+\DeclareMathOperator{\Fun}{Fun}
+\DeclareMathOperator{\colim}{colim}
+
+% 再定義 (\P は段落記号 ¶ の上書きとなる点に留意)
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+
+\title{代数的圏とAnimation}
+\author{じゅんにー}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+
+\section{篩状圏}
+\begin{dfn}
+  小圏$\mathcal D$に対して$\mathcal D$型極限, $\mathcal D$型余極限とは$\mathcal D$からの関手の極限, 余極限のことである.
+\end{dfn}
+\begin{dfn}
+  空でない小圏$\mathcal D$が篩状(sifted)\footnote{sifted category なのだが, 誰もsift(篩にかける)の意味を知らない気がするのと, shiftと混同しやすそうなので適当に日本語を当てた. 言いたいのは, 大体余フィルター圏と同じノリということ.}であるとは任意の$I,J:\mathcal D\to \mathrm{Set}$に対して自然に$\operatorname{colim}I\times\operatorname{colim}J\cong\operatorname{colim}(I\times J)$であることとする.
+  篩状圏の図式の余極限を篩状余極限(sifted colimit)と呼ぶ.
+\end{dfn}
+\begin{ex}
+  後で示すように, 篩状余極限の典型例はフィルター余極限と反射的余等化子である.
+  \begin{itemize}
+    \item フィルター余極限(filtered colimit)は空でなく, $a,b\in\mathcal D$に対して$a\to c, b\to c$が存在するような$c\in\mathcal D$が存在し, 任意の$a\rightrightarrows b$に対してそれらを等化する射$b\to c$が存在する圏$\mathcal D$の図式の余極限のことである.
+    \item 反射的余等化子(reflexive coequalizer)は$a\rightrightarrows b$であって, 共通のsection$s:b\to a$ (すなわち$fs=gs=\operatorname{id}_{b}$)が存在するような図式の余極限(つまり余等化子)のことである.
+  \end{itemize}
+\end{ex} 
+本節の目的はこの篩状極限について理解することである. 
+具体的には篩状圏の構造を明示的に記述し, フィルター余極限, 反射的余等化子との関係を議論することを目指す.
+そのための技術的な道具として, 終関手という概念を用いる. 
+このケースにおいては終関手が本質的な極限の可換性と図式の形状の関係を繋いでいる.
+\begin{dfn}
+小圏の間の関手$F:\mathcal C\to \mathcal D$が終関手であるとは, 
+任意の$\mathcal D$上の関手$I$の余極限が$\mathcal{C}$上の関手$IF$の余極限と自然に同型になることとする.
+つまり任意の$I:\mathcal D\to\mathcal A$に対して自然に
+\[\operatorname{colim}I\cong\operatorname{colim}IF\]
+である.
+\end{dfn}
+この証明は\cite{Final}にある. 
+\begin{theorem}
+$F:\mathcal C\to\mathcal D$が終関手であることと任意の$i\in D$に対してコンマ圏$i\downarrow F$が連結(任意の対象が射のジグザグで繋がっているということ\footnote{空の場合は連結には入れない})であることが同値である.
+\end{theorem}
+
+以下の議論は\cite{CommLimColim}による. 
+\begin{lemma}
+  $\mathcal J$を小圏, $\mathcal I$を局所小圏とする. この時関手$F:\mathcal J^{\mathrm{op}}\to\mathcal I$について次が同値である.
+  \begin{enumerate}
+    \item $F_*:\mathcal J\times \mathcal I\to\mathrm{Set}$; $(j,i)\mapsto\mathcal I(Fj,i)$における$\mathcal J$型極限と$\mathcal I$型余極限が可換である.
+    \item 余錐$\operatorname{Cocone}(F)$が連結.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  定義から考えると$\operatorname{colim}_{i\in\mathcal I}\operatorname{lim}_{j\in \mathcal J}\mathcal I(Fj,i)\cong\pi_0(\operatorname{Cocone}(F))$及び, 
+  $\operatorname{lim}_{j\in \mathcal J}\operatorname{colim}_{i\in\mathcal I}\mathcal I(Fj,i)\cong1$となることから従う.
+\end{proof}
+この補題と上の定理より次を得る.
+\begin{theorem}
+  $\mathcal J$を小圏, $\mathcal I$を局所小圏とする. この時以下は同値である.
+  \begin{enumerate}
+    \item 任意の関手$F:\mathcal J^{\mathrm{op}}\to\mathcal I$に対して$F_*:\mathcal J\times \mathcal I\to\mathrm{Set}$; $(j,i)\mapsto\mathcal I(Fj,i)$における$\mathcal J$型極限と$\mathcal I$型余極限が可換である.
+    \item 任意の関手$F:\mathcal J^{\mathrm{op}}\to\mathcal I$に対して余錐$\operatorname{Cocone}(F)$が連結.
+    \item $\mathcal I\xrightarrow{\Delta}\mathcal I^{\mathcal J^{\mathrm{op}}}$が終関手.
+  \end{enumerate}
+\end{theorem}
+\begin{corollary}
+  小圏$\mathcal I$に対し, 以下は同値である.
+  \begin{enumerate}
+  \item $\mathrm{Set}$ において終対象と$\mathcal I$型余極限が可換.
+  \item $\mathcal I$ が連結. 
+  \end{enumerate}
+\end{corollary}
+\begin{theorem}
+   小圏$\mathcal I$に対し, 以下は同値である.
+   \begin{enumerate}
+    \item $\mathrm{Set}$ において二項直積と$\mathcal I$型余極限が可換.
+    \item 任意の対象$i,j\in\mathcal I$に対して, $\mathrm{Cocone}(i,j)$が連結.
+    \item 対角関手$\Delta:\mathcal I\to \mathcal I\times \mathcal I$が終的.
+   \end{enumerate}
+   さらに, これらの条件を満たし, $\mathcal I$が空でないならば, 
+   \begin{enumerate}\setcounter{enumi}{3}
+    \item $\mathcal I$は連結であり, 篩状である.
+    \item $\mathcal I$型の余極限は有限直積と交換する.
+    \item 任意の対象$i_1,i_2,\ldots,i_n\in\mathcal I$に対して, $\mathrm{Cocone}(i_1,i_2,\ldots,i_n)$が連結.
+    \item $\mathcal I$に有限余直積を自由に加えた圏を$\overline{\mathcal I}$とする時$\mathcal I\to\overline{\mathcal I}$は終的である.
+   \end{enumerate}
+\end{theorem}
+\begin{proof}
+  非自明なのは(3)から(1)を示す部分である.
+  $\Delta:\mathcal I\to \mathcal I\times \mathcal I$が終関手であることから$\operatorname{colim}_{i\in\mathcal I}Fi\times Gi\cong \operatorname{colim}_{(i,j)\in\mathcal I\times \mathcal{I}}Fi\times Gj$となり, 
+  右辺は$\mathrm{Set}$がカルテシアン閉圏であることから随伴によって$\operatorname{colim}_{(i,j)\in\mathcal I\times \mathcal{I}}Fi\times Gj\cong \operatorname{colim}_{i\in\mathcal I}Fi\times\operatorname{colim}_{j\in\mathcal I} Gj$となることから(1)が従う.
+\end{proof}
+この定理からフィルター余極限と反射的余等化子が篩状余極限であることが直ちに従う. 逆に, 篩状余極限はある意味実質的にフィルター余極限と反射的余等化子によって支配されている.
+また, 任意の二項余直積を持つ小圏も篩状であることがこの定理からわかる.
+この証明は\cite{SiftedColim}による. 
+\begin{theorem}\label{FilRefToSif}
+  $\mathcal C$を有限余完備とする. 
+  この時, 関手$F:\mathcal C\to\mathcal D$がフィルター余極限と反射的余等化子を保つことと篩状余極限を保つことは同値である.
+\end{theorem}
+\begin{proof}
+  $I:\mathcal I\to\mathcal C$を篩状図式とする. $F(\operatorname{colim}Ii)\cong\operatorname{colim}FIi$を示せば良い(左辺の$\operatorname{colim}Ii$が存在する時右辺の普遍性を満たすことを示す).
+  この時, $\mathcal I\to\overline{\mathcal I}$が終関手であり, $\mathcal C$の有限余完備性から$I$が$\overline{I}:\overline{\mathcal I}\to\mathcal C$に拡張できる.
+  従って, $\mathcal I$は有限余直積を持つと仮定して良い.
+
+  $M\subset \mathcal I$を(充満とは限らない)有限部分圏とし, $Q_M=\operatorname{colim}_{i\in M}Ii\in \mathcal C$とする.
+  この時, $Q_M\cong\operatorname{coeq}\bigg(\coprod_{i\to j\in M}Ii\rightrightarrows \coprod_{i\in M}Ii\bigg)$と表すことができる.
+  ここで$\coprod_{i\to j\in M}Ii\rightrightarrows \coprod_{i\in M}Ii$はそれぞれ始点と終点に送る射であり, $\operatorname{id}:i\to i$を用いることでこの余極限が反射的余等化子であることもわかる.
+  さらに, $\operatorname{colim}_{i\in\mathcal I}Ii\cong\operatorname{colim}_{M}Q_M$であり, $\operatorname{colim}_{M}Q_M$はフィルター余極限である.
+
+  仮定から
+  \begin{align*}
+  F(\operatorname{colim}Ii)&\cong F(\operatorname{colim}_{M}Q_M)\\
+  &\cong \operatorname{colim}_{M}F(Q_M)\\
+  &\cong \operatorname{colim}_{M}F\bigg(\operatorname{coeq}\bigg(\coprod_{i\to j\in M}Ii\rightrightarrows \coprod_{i\in M}Ii\bigg)\bigg)\\
+  &\cong \operatorname{colim}_{M}\operatorname{coeq}\bigg(F\bigg(\coprod_{i\to j\in M}Ii\bigg)\rightrightarrows F\bigg(\coprod_{i\in M}Ii\bigg)\bigg)\\
+  \end{align*}
+  がわかるが最右辺が求める普遍性を満たすことはよく考えるとわかる.
+\end{proof}
+
+\section{代数的圏}
+以下は\cite{AlgStk}参照
+\begin{dfn}
+  圏$\mathcal C$が代数的であるとは有限余直積で閉じている本質的に小さい充満部分圏$\mathcal F_{\mathcal C}\subset\mathcal C$であって圏同値
+  \[\operatorname{Fun}_{\Pi}(\mathcal F_{\mathcal C}^{\mathrm{op}},\mathrm{Set})\to\mathcal C\]
+  が存在し, この圏同値と米田埋込みとの合成$\mathcal F_{\mathcal C}\hookrightarrow\operatorname{Fun}_{\Pi}(\mathcal F_{\mathcal C}^{\mathrm{op}},\mathrm{Set})\simeq\mathcal C$が埋込みと一致することをいう.
+
+  ここで, $\operatorname{Fun}_{\Pi}$は有限直積を保つ関手という意味である.
+\end{dfn}
+\begin{rmk}
+  $\mathrm{op}$を取っている都合で余直積が直積に変わっているので$\operatorname{Fun}_{\Pi}(\mathcal F_{\mathcal C}^{\mathrm{op}},\mathrm{Set})$は余直積を直積に写すということである.
+\end{rmk}
+例えば$\mathrm{Set},\mathrm{Ab},\mathrm{Mod}_R,\mathrm{CRing},\mathrm{CAlg}_R$が代表的な代数的圏である.
+代数的圏の具体例を挙げる上で重要な性質があるので, それを示してから具体例の詳細を述べたい.
+\begin{dfn}
+  $\mathcal C$を圏とする.
+  \begin{itemize}
+    \item $X\in\mathcal C$がコンパクトであるとは$\mathrm{Hom}(X,-):\mathcal{C}\to\mathrm{Set}$がフィルター余極限と交換することをいう.
+    \item $X\in\mathcal C$が射影的であるとは$\mathrm{Hom}(X,-):\mathcal{C}\to\mathrm{Set}$が反射的余等化子と交換することをいう.
+  \end{itemize}
+\end{dfn}
+\begin{lemma}
+  $\mathcal C$が代数的圏であるとし, $\mathcal F_{\mathcal C}$で生成されるとする.
+  この時, 任意の$X\in\mathcal C$は$\mathcal F_{\mathcal C}$の元からなる篩状余極限として表すことができる.
+\end{lemma}
+\begin{proof}
+  $X\in\mathcal C$について
+  \begin{align*}
+    \Hom_{\mathcal C}(\colim_{F\in\mathcal F_{\mathcal C},x\in X(F)}F,Y)&\cong\lim_{F\in\mathcal F_{\mathcal C},x\in X(F)}\Hom_{\mathcal C}(F,Y)\\
+    &\cong\lim_{F\in\mathcal F_{\mathcal C},x\in X(F)}Y(F)\\
+    &\cong\operatorname{Nat}(X(-),Y(-))\\
+    &\cong\Hom(X,Y)
+  \end{align*}
+  であるので$X\cong\colim_{F,x}F$である. この右辺が篩状余極限であることを示せば良いが, この図式の添字圏は任意の二項余直積を持つことがわかるので, 篩状である.
+  よって示された.
+\end{proof}
+\begin{lemma}
+  $\mathcal C\simeq\Fun_{\Pi}(\mathcal F_{\mathcal C}^{\mathrm{op}},\mathrm{Set})$を代数的圏とするとき, $\mathcal C$は篩状余極限で閉じる(さらに余極限が具体的に計算できる).
+  もっと言えば余完備($\mathcal F_{\mathcal C}$が有限余直積を持つので).
+\end{lemma}
+\begin{proof}
+  $X_i\in\Fun_{\Pi}(\mathcal F_{\mathcal C}^{\mathrm{op}},\mathrm{Set})$の篩状余極限は$(\colim_{i}X_i)(F)=\colim_{i}X_i(F)$となってほしい.
+  これは関手になるが有限直積を保つかが非自明. もし直積を保てば普遍性を満たすことはほとんど明らか.
+  そこで有限直積を保つかを考えるが, これは考えている図式が篩状なので有限直積と交換するため大丈夫.
+\end{proof}
+\begin{theorem}\label{RedToProj}
+  $\mathcal F_{\mathcal C}$を$\mathcal C$のコンパクト射影的な対象からなる充満部分圏とする.
+  このとき, $\mathcal C$が代数的であることと, $\mathcal F_{\mathcal C}$が本質的小圏でかつ$\mathcal F_{\mathcal C}$について代数的であることの条件を満たすことが同値である.
+\end{theorem}
+\begin{proof}
+  $\mathcal C$が代数的$\mathcal C\simeq\Fun_{\Pi}(\mathcal F^{\mathrm{op}},\mathrm{Set})$のときに$\mathcal C\simeq\Fun_{\Pi}(\mathcal F_{\mathrm{C}}^{\mathrm{op}},\mathrm{Set})$であることを示したい.
+
+  まず, $\mathcal F\subset\mathcal F_{\mathcal C}$であることを示す.
+  $c\in\mathcal F$とする. この時, 補題を用いれば$X_i$を篩状図式とするときに
+  \begin{align*}
+  \Hom_{\Fun(\mathcal F^{\mathrm{op}},\mathrm{Set})}(\colim_i X_i,\Hom(-,c))&\cong(\colim_i X_i)(c)\\
+  &\cong\colim_i (X_i(c))\\
+  &\cong\colim_i\Hom_{\Fun(\mathcal F^{\mathrm{op}},\mathrm{Set})}(X_i,\Hom_{\mathcal C}(-,c))
+  \end{align*}
+  となることから$\Hom(-,c)$と篩状余極限は交換する. 特に, $c\in\mathcal F_{\mathcal C}$である.
+
+  次に, 任意の$c\in\mathcal F_{\mathcal C}$はある$\mathcal F$の元$c'$のレトラクト, すなわち$p:c'\to c$, $s:c\to c'$であって$ps=\mathrm{id}_{c}$となるようなものが存在することを示す.
+  補題より,  $c$は篩状余極限$c=\colim F_i$, $F_i\in\mathcal F$の形で表すことができる.
+  今, 代数的であることから$\mathcal C$は余完備であるので定理\ref{FilRefToSif}よりコンパクトかつ射影的な$c$に対し, $\Hom(c,-)$は篩状余極限を保つ.
+  特に, 
+  \[\Hom(c,c)\cong\Hom(c,\colim F_i)\cong\colim\Hom(c,F_i)\]
+  である. ここで最左辺に含まれる$\mathrm{id}_{c}$の右辺での行き先を考えるとあるindex $i$についての$s:c\to F_i$の像と対応していることがわかる.
+  余極限の定義から$p:F_i\to c$があり, 少し考えればこの$s,p,F_i$が求めるレトラクトを与えていることがわかる.
+
+  最後に, $\mathcal C\simeq\Fun_{\Pi}(\mathcal F_{\mathrm{C}}^{\mathrm{op}},\mathrm{Set})$であることを示したい.
+  これは$\mathcal C\simeq\Fun_{\Pi}(\mathcal F^{\mathrm{op}},\mathrm{Set})$を拡張することで得られるが, $\mathcal F_{\mathcal C}$の元は$\mathcal F$のレトラクトとして書けるので, 
+  $F\in \mathcal C\simeq\Fun_{\Pi}(\mathcal F^{\mathrm{op}},\mathrm{Set})$は$e=sp$についての$\operatorname{coeq}(F\mathrm{id},Fe)$を考えることで実際に拡張することができる.
+  (ちゃんと拡張が直積と整合することは確認すべきだがまあ大丈夫.)
+\end{proof}
+\begin{ex}
+$\mathrm{Set}$, $\mathrm{Ab}$, $\mathrm{Mod}_R$, $\mathrm{CRing}$, $\mathrm{CAlg}_R$はそれぞれ
+$\mathrm{FinSet}$, $\mathrm{FinFree}_{\mathbb Z}$, $\mathrm{FinFree}_{R}$, $\mathrm{FinPoly}_{\mathbb Z}$, $\mathrm{FinPoly}_{R}$によって代数的圏になる.
+確かにここで使っている部分圏はコンパクト射影的な対象になっていることに注意してほしい.
+ただし, 常にコンパクト射影対象全体を用いるのはコンパクト射影対象を具体的に記述しにくいケースがあるので得策とは限らない.
+実際, $R$加群の圏では一般には自由でも射影的とは限らないし, $\mathrm{Alg}_R$でも多項式環以外にコンパクト射影対象が存在する場合がある.
+もっといえばどのような場合に$\mathrm{Alg}_R$のコンパクト射影対象が多項式環になるのかは$R$が体の場合でもほとんど未解決だったりする(Zariski's cancellation problem)\cite{CptProj}.  
+\end{ex}
+以下, 特に断らない限り$\mathcal F_{\mathcal C}$はコンパクト射影的対象の全体のなす充満部分圏であるとする.
+\begin{prop}
+$\mathcal C$を代数的圏, $\mathcal D$をフィルター余極限と反射的余等化子を持つ圏とする.
+この時,
+\[\Fun'(\mathcal C,\mathcal D)\simeq \Fun(\mathcal F_{\mathcal C}, \mathcal D)\]
+が成立する.
+\end{prop}
+\begin{proof}
+  $\mathcal C$の任意の元は$\mathcal F_{\mathcal C}$の篩状余極限で表される.
+  定理\ref{FilRefToSif}より左辺の関手は篩状余極限を保つので左辺の関手は$\mathcal F_{\mathcal C}$の行き先によって決まっている.
+  よって$\Fun'(\mathcal C,\mathcal D)\simeq\Fun'(\mathcal F_{\mathcal C},\mathcal D)$である.
+  あとは$'$が不要であることを確認すればよいが定理\ref{RedToProj}の最後と同じように$\operatorname{coeq}(F\mathrm{id},Fe)$を考えれば良い.
+  (丁度これが絶対余等化子(split coequalizer)になっている)
+\end{proof}
+
+\section{Animation}
+\begin{dfn}
+  $\mathcal C$を代数的圏, $C^+$を余極限を持つ無限圏とする.
+  $\mathcal F_{\mathcal C}\hookrightarrow C^+$が$\mathcal C$のanimationであるとは任意のフィルター余極限と幾何学的実現(反射的余等化子の無限圏版)を持つ無限圏$\mathcal D$に対して
+  \[\Fun'(\mathcal C^+,\mathcal D)\simeq\Fun(\mathcal F_{\mathcal C},\mathcal D)\]
+  が成立することとする. この時, $\mathcal C^+=\operatorname{Anim}(\mathcal C)$と書く.
+\end{dfn}
+上の命題を無限圏版で議論することで次を得ると思う(詳細は知らないです).
+\begin{theorem}
+  Animationについて以下が成立する.
+  \begin{enumerate}
+    \item $\mathrm{Gpd}_{\infty}\simeq \mathrm{Anim}(\mathrm{Set})$.
+    \item $\mathcal C$を代数的圏とする時,
+    \[\Fun_{\Pi}(\mathcal F_{\mathcal C}^{\mathrm{op}}, \mathrm{Gpd}_{\infty})\simeq\operatorname{Anim}(\mathcal C)\]
+    であり, 米田埋込みによる$\mathcal F_{\mathcal C}$への制限とも整合する.
+  \end{enumerate}
+\end{theorem}
+\begin{ex}
+  Infinity groupoid, Animated ring や導来無限圏$D(A)_{\geq0}=\operatorname{Anim}(\mathrm{Mod}_A)$などがanimationの例である.
+\end{ex}
+
+ここから先の無限圏の理論は多分文献が豊富なのでそれにあたってください. 私はLectures on Algebaric Stacks\cite{AlgStk}を読んているときに上の議論の行間を埋めるのに苦労したのでこのノートを書いたというわけです. 
+
+
+
+\nocite{*} % 本文で \cite していない文献も載せる
+\printbibliography[title=参考文献]
+\end{document}
