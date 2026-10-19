@@ -1,24 +1,551 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prime Factorization | jun2nosimobe</title>
-  <link rel="stylesheet" href="../../style.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>素因数分解アルゴリズム デモ</title>
+    <style>
+        body { background-color: #121212; color: #ffffff; font-family: monospace; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .controls { background: #1e1e1e; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #333;}
+        input[type="text"] { padding: 8px; font-size: 16px; width: 100%; max-width: 300px; box-sizing: border-box; background: #333; color: #fff; border: 1px solid #555; }
+        select { padding: 4px; font-size: 16px; background: #333; color: #fff; border: 1px solid #555; }
+        button { padding: 10px 15px; font-size: 16px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; font-weight: bold; border-radius: 4px;}
+        button:hover { background: #0056b3; }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        /* ラジオボタン用のスタイル */
+        .mode-selector { margin: 15px 0; font-size: 16px; }
+        .mode-selector label { margin-right: 20px; cursor: pointer; }
+        .thread-selector { margin: 15px 0; font-size: 16px; }
+
+        /* コンソールのスタイル */
+        #status-bar { background: #002244; color: #66ccff; padding: 10px; font-weight: bold; border-radius: 4px 4px 0 0; border: 1px solid #333; border-bottom: none;}
+        #terminal {
+            background: #000; color: #ccc; padding: 15px; border-radius: 0 0 4px 4px;
+            height: 450px; overflow-y: auto; font-size: 14px; line-height: 1.6;
+            border: 1px solid #333;
+        }
+
+        .highlight { color: #ffeb3b; font-weight: bold; }
+        .success { color: #00e676; font-weight: bold; font-size: 1.1em; padding: 5px 0;}
+        .math-detail { background: #113311; color: #aaffaa; padding: 10px; margin: 5px 0; border-left: 4px solid #00e676; font-family: "Courier New", monospace;}
+        .final-result { color: #00bcd4; font-weight: bold; font-size: 1.4em; margin-top: 15px; border-top: 1px dashed #555; padding-top: 15px;}
+        .dim { color: #666; }
+        /* ターミナルのログ行レイアウト用 */
+        .log-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 2px;
+        }
+        .log-time {
+            flex: 0 0 90px; /* 時間列の幅を固定 */
+            color: #777;
+            font-family: "Courier New", monospace;
+            font-size: 0.9em;
+            user-select: none; /* タイムスタンプはコピペされないようにする */
+        }
+        .log-msg {
+            flex: 1;
+            word-break: break-all; /* 長い数式も折り返す */
+        }
+
+        a { color: #66ccff; }
+        .site-nav { margin-bottom: 10px; }
+        footer { margin-top: 20px; color: #999; font-size: 0.9em; line-height: 1.6; }
+    </style>
 </head>
 <body>
-  <header>
-    <p class="site-title"><a href="../../index.html">jun2nosimobe</a></p>
-    <nav>
-      <a href="../../articles/articles.html">Articles</a>
-      <a href="../../toys/toys.html">Toys</a>
-      <a href="../../diaries/diaries.html">Diaries</a>
-    </nav>
-  </header>
+    <div class="container">
+        <nav class="site-nav"><a href="../../index.html">jun2nosimobe</a> / <a href="../toys.html">Toys</a></nav>
+        <h1>アルゴリズム比較: 素因数分解</h1>
 
-  <main>
-    <h1>Prime Factorization</h1>
-    <!-- 本文: ツールの説明と本体 -->
-  </main>
+        <div class="controls">
+            <div>
+                <label>ターゲット N: </label>
+                <input type="text" id="targetN" value="13180295982833324021"/>
+            </div>
+
+            <div class="mode-selector">
+                <strong>アルゴリズム選択: </strong>
+                <label><input type="radio" name="algoMode" value="hybrid" checked> ECM + ロー法 (実践向け)</label>
+                <label><input type="radio" name="algoMode" value="rho_only"> ロー法のみ (比較用)</label>
+                <label><input type="radio" name="algoMode" value="ecm_only"> ECMのみ (比較用)</label>
+            </div>
+
+            <div class="thread-selector">
+                <label><strong>スレッド数: </strong><select id="threadCount"></select></label>
+                <span class="dim">(論理コア数: <span id="coreCount"></span>. 増やすと速くなるが CPU を多く使う)</span>
+            </div>
+
+            <button id="startBtn">分解スタート</button>
+            <button id="stopBtn" disabled>停止</button>
+        </div>
+
+        <div id="status-bar">読み込み中...</div>
+        <div id="terminal"></div>
+
+        <footer>
+            ソースコード: <a href="https://github.com/jun2nosimobe/Prime_Factorization">github.com/jun2nosimobe/Prime_Factorization</a> (自作部分: <a href="LICENSE.txt">MIT License</a>)<br>
+            多倍長整数演算に <a href="https://gmplib.org/">GNU MP Library</a> の mini-gmp を使用しています
+            (<a href="licenses/lgpl-3.0.txt">GNU LGPL v3</a> のもとで利用. LGPL v3 が参照する <a href="licenses/gpl-3.0.txt">GNU GPL v3</a> も同梱).
+        </footer>
+    </div>
+
+    <script src="ecm_module.js"></script>
+    <script>
+        const terminal = document.getElementById('terminal');
+        const statusBar = document.getElementById('status-bar');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const threadSelect = document.getElementById('threadCount');
+
+        startBtn.disabled = true;
+        let startTime = 0;
+        let running = false;
+        let algoMode = "hybrid";
+
+        // スレッド数の選択肢: 1 〜 論理コア数-1 (既定は 2)
+        const CORES = navigator.hardwareConcurrency || 4;
+        const MAX_THREADS = Math.max(1, CORES - 1);
+        for (let n = 1; n <= MAX_THREADS; n++) threadSelect.add(new Option(n, n));
+        threadSelect.value = Math.min(2, MAX_THREADS);
+        document.getElementById('coreCount').textContent = navigator.hardwareConcurrency || "不明";
+
+        // -------------------------------------------------
+        // Workerプール: 必要になった時点で起動し, 不要になったら破棄する
+        // -------------------------------------------------
+        let workerCount = 1;
+        let workers = [];
+        let idleWorkers = [];
+        let workerPhases = {}; // 各Workerが実行中のECMフェーズ
+        let generation = 0;    // 破棄済みWorkerからの応答を無視するための世代番号
+
+        function appendLog(text, className = "") {
+            const div = document.createElement('div');
+            div.className = 'log-row'; // 行全体のFlexコンテナ
+
+            // 経過時間の計算 (startTimeからの差分)
+            let elapsedStr = "[00:00:00]";
+            if (startTime > 0) {
+                let elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                let hh = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+                let mm = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+                let ss = String(elapsedSeconds % 60).padStart(2, '0');
+                elapsedStr = `[${hh}:${mm}:${ss}]`;
+            }
+
+            // 元のテキストの先頭に改行 (\n や <br>) がある場合、
+            // カラムごと下がるのを防ぐため、先頭の改行を削除して行の上にマージン(余白)を設定する
+            let hasTopMargin = false;
+            if (text.startsWith('\n') || text.startsWith('<br>')) {
+                hasTopMargin = true;
+                text = text.replace(/^(<br>|\n)+/, ''); // 先頭の改行を削除
+            }
+            if (hasTopMargin) {
+                div.style.marginTop = "15px";
+            }
+
+            // 時間列とメッセージ列を分離して流し込む
+            div.innerHTML = `
+                <div class="log-time">${elapsedStr}</div>
+                <div class="log-msg ${className}">${text}</div>
+            `;
+
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // --- タイマーとステータス表示の管理 ---
+        let currentStatusText = "待機中...";
+        let globalTimer = null;
+
+        function updateStatusDisplay() {
+            let elapsedText = "";
+            if (startTime > 0 && running) { // 実行中のみタイマー表示
+                let elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                let hh = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+                let mm = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+                let ss = String(elapsedSeconds % 60).padStart(2, '0');
+                elapsedText = `<span style="float: right; color: #ffeb3b; font-family: monospace;">⏱ 経過時間: ${hh}:${mm}:${ss}</span>`;
+            }
+            // textContent ではなく innerHTML でHTMLタグごと流し込む
+            statusBar.innerHTML = currentStatusText + elapsedText;
+        }
+
+        function updateStatus(text) {
+            currentStatusText = text;
+            updateStatusDisplay();
+        }
+
+        // 全Workerを破棄して計算を中断し, CPUを解放する
+        function terminateWorkers() {
+            generation++;
+            workers.forEach(w => w.terminate());
+            workers = [];
+            idleWorkers = [];
+            workerPhases = {};
+        }
+
+        // Workerがなければ workerCount 個起動し, 全員の準備ができたら onReady を呼ぶ
+        function ensureWorkers(onReady) {
+            if (workers.length > 0) {
+                onReady();
+                return;
+            }
+            const gen = ++generation;
+            let readyCount = 0;
+            updateStatus("スレッドを準備中...");
+
+            for (let i = 0; i < workerCount; i++) {
+                const worker = new Worker('ecm_worker.js');
+
+                // Workerがクラッシュした場合
+                worker.onerror = function(error) {
+                    console.error(`Worker ${i} crashed:`, error);
+                    appendLog(`❌ [致命的エラー] スレッド ${i} が異常終了しました。コンソールを確認してください。`, "highlight");
+                    // 死んだWorkerをidleWorkersに戻さないことで無限ループを防ぐ
+                };
+
+                worker.onmessage = function(e) {
+                    if (gen !== generation) return;
+                    if (e.data.type === 'ready') {
+                        idleWorkers.push(i);
+                        if (++readyCount === workerCount) onReady();
+                    } else if (e.data.type === 'result') {
+                        handleWorkerResult(e.data);
+                    } else if (e.data.type === 'rho_result') {
+                        handleRhoResult(e.data.workerId, e.data.factor);
+                    }
+                };
+                workers.push(worker);
+            }
+        }
+
+        // タブが非表示の間は新しいジョブを投げず, 表示されたら再開する
+        let deferred = null;
+
+        function runWhenVisible(fn) {
+            if (!document.hidden) {
+                fn();
+                return;
+            }
+            deferred = fn;
+            updateStatus("一時停止中 (タブが非表示の間は新しい計算を始めません)");
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden || !deferred) return;
+            const fn = deferred;
+            deferred = null;
+            updateStatus("実行中...");
+            fn();
+        });
+
+        Module.onRuntimeInitialized = function() {
+            startBtn.disabled = false;
+            updateStatus("待機中... (準備完了)");
+        };
+
+        // -------------------------------------------------
+        // グローバルな状態管理
+        // -------------------------------------------------
+        let unprocessed = [];
+        let primeFactors = [];
+        let currentN = null;
+
+        let ecmPhases = [
+            { B1: 2000,      maxCurves: 25,    batchSize: 5 },
+            { B1: 11000,     maxCurves: 90,    batchSize: 3 },
+            { B1: 50000,     maxCurves: 300,   batchSize: 2 },
+            { B1: 250000,    maxCurves: 700,   batchSize: 1 },
+            { B1: 1000000,   maxCurves: 1800,  batchSize: 1 },
+            { B1: 3000000,   maxCurves: 4000,  batchSize: 1 },
+            { B1: 11000000,  maxCurves: 8000,  batchSize: 1 },
+            { B1: 43000000,  maxCurves: 20000, batchSize: 1 }
+        ];
+        let currentPhaseIdx = 0;
+        let B1 = ecmPhases[0].B1;
+        let curvesTriedInPhase = 0;
+        let totalCurves = 0;
+        let targetResolved = false;
+
+        // -------------------------------------------------
+        // コア・ロジック
+        // -------------------------------------------------
+
+        startBtn.onclick = function() {
+            const n_str = document.getElementById('targetN').value.trim();
+            if(!n_str || !/^-?\d+$/.test(n_str)) {
+                alert("正しい数値を入力してください。");
+                return;
+            }
+            terminal.innerHTML = "";
+            workerCount = Number(threadSelect.value);
+            algoMode = document.querySelector('input[name="algoMode"]:checked').value;
+            appendLog(`=== N = ${n_str} の完全分解を開始 ===`, "highlight");
+            appendLog(`[システム] ${workerCount} スレッドで並列実行します`, "highlight");
+
+            running = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            threadSelect.disabled = true;
+
+            updateStatus("実行中...");
+
+            unprocessed = [BigInt(n_str)];
+            primeFactors = [];
+            currentN = null;
+            startTime = Date.now();
+
+            if (globalTimer) clearInterval(globalTimer);
+            globalTimer = setInterval(updateStatusDisplay, 1000);
+
+            setTimeout(processNextTarget, 10);
+        };
+
+        stopBtn.onclick = function() {
+            if (!running) return;
+            appendLog(`[システム] 停止しました。`, "dim");
+            finish(primeFactors, unprocessed.concat(currentN ? [currentN] : []));
+        };
+
+        function processNextTarget() {
+            if (!running) return;
+            if (unprocessed.length === 0) {
+                finish(primeFactors, []);
+                return;
+            }
+
+            currentN = unprocessed.shift();
+            targetResolved = false;
+
+            // 0, 1, 負数の特殊ケース
+            if (currentN <= 1n) {
+                if (currentN === 1n) {
+                    appendLog(`[確認] 1 は素因数分解の対象外（単位元）です。`, "dim");
+                    primeFactors.push(currentN);
+                } else if (currentN === 0n) {
+                    appendLog(`[確認] 0 は分解できません。`, "dim");
+                    primeFactors.push(currentN);
+                } else {
+                    appendLog(`[確認] 負数(${currentN})です。`, "dim");
+                    primeFactors.push(-1n); // 負の符号を抽出
+                    currentN = -currentN;
+                    if (currentN > 1n) unprocessed.push(currentN);
+                }
+                currentN = null;
+                setTimeout(processNextTarget, 10);
+                return;
+            }
+
+            if (currentN < 1000n) {
+                appendLog(`\n>>> ターゲット: ${currentN} (小数のため試行除法で処理) <<<`, "highlight");
+                let found = false;
+                for (let d = 2n; d * d <= currentN; d++) {
+                    if (currentN % d === 0n) {
+                        const q = currentN / d;
+                        appendLog(`🎉 <b>試行除法で発見:</b> ${currentN} = ${d} × ${q}`, "success");
+                        if (d > 1n) unprocessed.push(d);
+                        if (q > 1n) unprocessed.push(q);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    appendLog(`[確認] ${currentN} は素数です。`, "highlight");
+                    primeFactors.push(currentN);
+                }
+                currentN = null;
+                setTimeout(processNextTarget, 10);
+                return;
+            }
+
+            if (Module.is_prime_cpp(currentN.toString())) {
+                appendLog(`[確認] ${currentN} は素数です。`, "highlight");
+                primeFactors.push(currentN);
+                currentN = null;
+                setTimeout(processNextTarget, 10);
+                return;
+            }
+
+            appendLog(`\n>>> ターゲット: ${currentN} <<<`, "highlight");
+            totalCurves = 0;
+            currentPhaseIdx = 0;
+            B1 = ecmPhases[0].B1;
+            curvesTriedInPhase = 0;
+
+            ensureWorkers(() => runWhenVisible(() => {
+                if (!running) return;
+                if (algoMode === "ecm_only") {
+                    dispatchJobs();
+                    return;
+                }
+                updateStatus(`[ロー法] 小さな素因数を探索中...`);
+                appendLog(`<span class="dim">ポラード・ロー法 (x = x^2 + c mod N) で探索中...</span>`);
+                const workerId = idleWorkers.shift();
+                workers[workerId].postMessage({
+                    cmd: 'run_rho',
+                    workerId: workerId,
+                    n_str: currentN.toString(),
+                    steps: (algoMode === "rho_only") ? 5000000 : 100000
+                });
+            }));
+        }
+
+        function handleRhoResult(workerId, factor_str) {
+            idleWorkers.push(workerId);
+            if (!running) return;
+
+            if (factor_str !== "") {
+                const p = BigInt(factor_str);
+                const q = currentN / p;
+                appendLog(`🎉 <b>ロー法で発見:</b> ${currentN} = ${p} × ${q}`, "success");
+                if (p > 1n) unprocessed.push(p);
+                if (q > 1n) unprocessed.push(q);
+                currentN = null;
+                setTimeout(processNextTarget, 10);
+            } else if (algoMode === "rho_only") {
+                appendLog(`❌ ロー法では時間内に見つかりませんでした。`, "highlight");
+                finish(primeFactors, unprocessed.concat([currentN]));
+            } else {
+                appendLog(`<span class="dim">  -> ロー法では見つからず。ECMに並列移行します。</span>`);
+                dispatchJobs();
+            }
+        }
+
+        function dispatchJobs() {
+            if (!running || targetResolved) return;
+            if (document.hidden) {
+                runWhenVisible(dispatchJobs);
+                return;
+            }
+
+            updateStatus(`[ECM並列] フェーズ${currentPhaseIdx+1} (B1=${B1}) | 試行曲線: ${totalCurves} 個目`);
+            const batchSize = ecmPhases[currentPhaseIdx].batchSize;
+
+            while (idleWorkers.length > 0) {
+                const workerId = idleWorkers.shift();
+                const seed = Math.floor(Math.random() * 1000000000);
+
+                workerPhases[workerId] = currentPhaseIdx;
+
+                workers[workerId].postMessage({
+                    cmd: 'run_ecm',
+                    workerId: workerId,
+                    n_str: currentN.toString(),
+                    B1: B1,
+                    seed: seed,
+                    num_curves: batchSize
+                });
+            }
+        }
+
+        function handleWorkerResult(result) {
+            // デバッグ用: Workerの応答をコンソールに出力
+            console.log(`[JS監視] Worker ${result.workerId} から応答 | ステータス: ${result.status} | 試行数: ${result.curves_tried} | フェーズ: ${currentPhaseIdx+1} (B1=${B1})`);
+            if (result.status === "found") {
+                console.log(`[JS監視] 🎉 因数発見データ:`, result);
+            }
+
+            // 結果が返ってきたWorkerは必ず待機列に戻す
+            idleWorkers.push(result.workerId);
+
+            if (!running || targetResolved) return;
+
+            if (result.status === "found") {
+                targetResolved = true;
+
+                const p = BigInt(result.factor);
+                const q = currentN / p;
+
+                appendLog(`🎉 <b>ECMで素因数発見！</b> (曲線ガチャ ${totalCurves}回目で的中)`, "success");
+
+                let detailHtml = `<b>[アルゴリズム詳細解説]</b><br>`;
+                detailHtml += `ターゲット: N = ${currentN}<br><br>`;
+
+                detailHtml += `<div style="background: #002200; padding: 10px; border: 1px solid #00e676; margin-bottom: 10px;">`;
+                detailHtml += `<span style="color:#aaffaa;">使用したモントゴメリ曲線:</span><br>`;
+                detailHtml += `<span style="color:#ffcc00; font-size: 1.2em;">E : y² = x³ + ${result.A}x² + x  (mod N)</span><br><br>`;
+                detailHtml += `<span style="color:#aaffaa;">初期点 (アフィンX座標):</span><br>`;
+                detailHtml += `<span style="color:#ffcc00;">P₀_x = ${result.P_x}</span><br>`;
+                detailHtml += `</div>`;
+
+                if (result.phase === 0) {
+                    detailHtml += `<b style="color:#ff9800;">【フェーズ0 (曲線初期化) で的中】</b><br>`;
+                    detailHtml += `曲線を生成するための拡張ユークリッド互除法（逆元計算）の最中に、偶然にも因数との衝突を検知しました！（一撃必殺）<br>`;
+                } else if (result.phase === 1) {
+                    detailHtml += `<b style="color:#66ccff;">【フェーズ1 (B1) で的中】</b><br>`;
+                    detailHtml += `素数 <b style="color:white">${result.prime}</b> のべき乗（k = ${result.k}）によるスカラー倍完了時に発覚。<br>`;
+                } else {
+                    detailHtml += `<b style="color:#ff66b2;">【フェーズ2 (多点評価) で的中】</b><br>`;
+                    detailHtml += `baby-step/giant-step の多項式を剰余木で多点評価する途中で衝突を検知！<br>`;
+                }
+
+                detailHtml += `・Z座標（または評価値累積）: <span style="font-size: 0.8em; word-break: break-all;">Z = ${result.Z}</span><br><br>`;
+                detailHtml += `<span style="color:#00e676; font-size: 1.1em;"><b>GCD( Z, N ) = ${p} > 1</b></span> となりました！<br>`;
+
+                appendLog(detailHtml, "math-detail");
+                appendLog(`${currentN} = ${p} × ${q}`, "success");
+
+                if (p > 1n) unprocessed.push(p);
+                if (q > 1n) unprocessed.push(q);
+                currentN = null;
+
+                appendLog(`[システム] 他スレッドの計算を中断します。`, "dim");
+                terminateWorkers();
+                setTimeout(processNextTarget, 10);
+                return;
+            }
+
+            // 現在のフェーズで投げたジョブの結果だけを数える
+            if (workerPhases[result.workerId] === currentPhaseIdx) {
+                totalCurves += result.curves_tried;
+                curvesTriedInPhase += result.curves_tried;
+
+                if (curvesTriedInPhase >= ecmPhases[currentPhaseIdx].maxCurves) {
+                    currentPhaseIdx++;
+                    if (currentPhaseIdx < ecmPhases.length) {
+                        B1 = ecmPhases[currentPhaseIdx].B1;
+                        curvesTriedInPhase = 0;
+                        appendLog(`<span class="dim">...限界曲数到達。B1を ${B1} に引き上げてさらに並列探索します</span>`);
+                    } else {
+                        currentPhaseIdx = 0;
+                        B1 = ecmPhases[0].B1;
+                        curvesTriedInPhase = 0;
+                        appendLog(`<span class="dim">...一周完了。新しい曲線セットで初期フェーズから再挑戦します</span>`);
+                    }
+                }
+            }
+            dispatchJobs();
+        }
+
+        function finish(primes, composites) {
+            running = false;
+            deferred = null;
+            // 裏で計算中のWorkerを破棄してCPUを解放する
+            terminateWorkers();
+            if (globalTimer) clearInterval(globalTimer);
+
+            primes.sort((a, b) => (a < b ? -1 : (a > b ? 1 : 0)));
+            composites.sort((a, b) => (a < b ? -1 : (a > b ? 1 : 0)));
+
+            let resultElements = [];
+            primes.forEach(p => resultElements.push(p.toString()));
+            composites.forEach(c => resultElements.push(`[未分解:${c}]`));
+
+            const equation = `${document.getElementById('targetN').value.trim()} = ${resultElements.join(" × ")}`;
+            appendLog(`<br>=== 最終結果 ===`, "final-result");
+            appendLog(equation, "final-result");
+
+            let timeTaken = (Date.now() - startTime) / 1000;
+            updateStatus(`完了 (所要時間: ${timeTaken.toFixed(2)} 秒)`);
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            threadSelect.disabled = false;
+            appendLog("\n🛑 処理が完了しました。");
+        }
+    </script>
 </body>
 </html>
